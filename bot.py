@@ -9,9 +9,10 @@ import asyncio
 # SOZLAMALAR
 # =============================================
 
-BOT_TOKEN = os.environ.get("8988017731:AAGKviFJ2D9i2vqfoJl6wL7ZeC8mTHh6a7w", "8988017731:AAGKviFJ2D9i2vqfoJl6wL7ZeC8mTHh6a7w")
-OPENAI_API_KEY = os.environ.get("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", "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")
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "SIZNING_BOT_TOKEN")
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "SIZNING_OPENAI_KEY")
 WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "")
+
 
 SYSTEM_PROMPT = """Sen Avtomentor haydovchilik maktabi va online kurslarining yordamchi assistentisan.
  
