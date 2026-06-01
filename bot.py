@@ -36,9 +36,8 @@ JAVOB BERISH QOIDALARI:
 
 print(f"BOT_TOKEN mavjud: {bool(BOT_TOKEN)}")
 print(f"OPENAI_API_KEY mavjud: {bool(OPENAI_API_KEY)}")
-print(f"OPENAI_API_KEY boshi: {OPENAI_API_KEY[:10] if OPENAI_API_KEY else 'YOQ'}")
 
-openai.api_key = OPENAI_API_KEY
+openai_client = openai.OpenAI(api_key=OPENAI_API_KEY)
 user_histories = {}
 app = Flask(__name__)
 
@@ -54,16 +53,7 @@ async def init_app():
 loop.run_until_complete(init_app())
 
 
-async def process_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    message = update.message or update.business_message
-    if not message or not message.text:
-        return
-
-    user_id = message.from_user.id
-    user_text = message.text
-
-    print(f"Xabar keldi: {user_text}")
-
+async def get_ai_reply(user_id, user_text):
     if user_id not in user_histories:
         user_histories[user_id] = []
 
@@ -72,9 +62,8 @@ async def process_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_histories[user_id] = user_histories[user_id][-10:]
 
     try:
-        print("OpenAI ga so'rov yuborilmoqda...")
-        client = openai.OpenAI(api_key=OPENAI_API_KEY)
-        response = client.chat.completions.create(
+        print(f"OpenAI ga so'rov: {user_text[:30]}")
+        response = openai_client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
@@ -84,30 +73,46 @@ async def process_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             temperature=0.7
         )
         reply = response.choices[0].message.content
-        print(f"OpenAI javob berdi: {reply[:50]}")
+        print(f"OpenAI javob: {reply[:50]}")
+        user_histories[user_id].append({"role": "assistant", "content": reply})
+        return reply
     except Exception as e:
         print(f"OpenAI XATO: {str(e)}")
         print(traceback.format_exc())
-        reply = "Hozir texnik muammo bor, tez orada Asadbek aka o'zi bog'lanadi! 🙏"
+        return "Hozir texnik muammo bor, tez orada Asadbek aka o'zi bog'lanadi! 🙏"
 
-    user_histories[user_id].append({"role": "assistant", "content": reply})
 
-    if update.business_message:
+async def handle_update(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # Oddiy xabar
+    if update.message and update.message.text:
+        print(f"Oddiy xabar: {update.message.text[:30]}")
+        reply = await get_ai_reply(update.message.from_user.id, update.message.text)
+        await update.message.reply_text(reply)
+
+    # Business xabar
+    elif update.business_message and update.business_message.text:
+        print(f"Business xabar: {update.business_message.text[:30]}")
+        reply = await get_ai_reply(
+            update.business_message.from_user.id,
+            update.business_message.text
+        )
         await context.bot.send_message(
-            chat_id=message.chat_id,
+            chat_id=update.business_message.chat_id,
             text=reply,
             business_connection_id=update.business_message.business_connection_id
         )
     else:
-        await message.reply_text(reply)
+        print(f"Boshqa update turi: {update}")
 
 
-application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, process_message))
+# Barcha updatelarni ushlash
+application.add_handler(MessageHandler(filters.ALL, handle_update))
 
 
 @app.route("/webhook", methods=["POST"])
 def webhook():
     data = request.get_json()
+    print(f"Webhook keldi: {list(data.keys())}")
     update = Update.de_json(data, application.bot)
     loop.run_until_complete(application.process_update(update))
     return "OK", 200
