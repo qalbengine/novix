@@ -33,10 +33,11 @@ Brend: Avtomentor / Ilhomjon Avtotest
 - Haftada 6 dars (2 smena tanlovi)
 - Nazariy + haftada 1 kun amaliy mashg'ulot
 
-📅 Imtihonga tayyorlov (Offline intensiv):
+📅 Imtihonga tayyorlov Offline kurs (Offline intensiv):
 - Davomiyligi: 7 kun
 - Narx: 1,000,000 so'm
 - 100% o'tish kafolati!
+- Yozilish uchun 775305505
 - Uzoqdan kelganlar uchun kvartira: 35,000 so'm/kun
 
 ━━━━━━━━━━━━━━━━━━━━━━
