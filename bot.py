@@ -14,20 +14,20 @@ OPENAI_API_KEY = os.environ.get("sk-proj-JEuY6Zgfo7-7bJU-ThMlsiDt7e7iIsnIFXKjJE6
 WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "")
 
 SYSTEM_PROMPT = """Sen Avtomentor haydovchilik maktabi va online kurslarining yordamchi assistentisan.
-
+ 
 HAYDOVCHILIK MAKTABI haqida:
 - Brend: Avtomentor
 - Joylashuv: Baliqchi tumani, Andijon viloyati
 - Kategoriyalar: B va BC
 - 3600+ dan ortiq o'quvchi bitirgan
 - Pul qaytarish kafolati bor
-
+ 
 ONLINE KURS haqida:
 - Veb-sayt: avtomentorpro.uz
 - 14 ta darsdan iborat to'liq kurs
 - Yo'l harakati qoidalari imtihoniga tayyorgarlik
 - Instagram: @avtomentor (128K+ obunachilar)
-
+ 
 JAVOB BERISH QOIDALARI:
 1. O'zbek tilida, do'stona va professional
 2. Qisqa va aniq javob ber (3-5 jumladan ko'p emas)
@@ -35,32 +35,41 @@ JAVOB BERISH QOIDALARI:
 4. Online kurs so'rasa: avtomentorpro.uz ga yo'nalt
 5. Birinchi xabarga salom bilan boshla
 6. Oxirida: "Boshqa savolingiz bo'lsa yozing! 😊" de
-7. Haydovchilik guvohnomasi, imtihon haqida so'rasa bilgan ma'lumotingni ayt
 """
-
-# =============================================
-
+ 
 openai.api_key = OPENAI_API_KEY
 user_histories = {}
 app = Flask(__name__)
+ 
+# Global event loop
+loop = asyncio.new_event_loop()
+asyncio.set_event_loop(loop)
+ 
+# Application yaratish va initialize qilish
 application = Application.builder().token(BOT_TOKEN).build()
-
-
+ 
+async def init_app():
+    await application.initialize()
+    await application.start()
+ 
+loop.run_until_complete(init_app())
+ 
+ 
 async def process_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.message or update.business_message
     if not message or not message.text:
         return
-
+ 
     user_id = message.from_user.id
     user_text = message.text
-
+ 
     if user_id not in user_histories:
         user_histories[user_id] = []
-
+ 
     user_histories[user_id].append({"role": "user", "content": user_text})
     if len(user_histories[user_id]) > 10:
         user_histories[user_id] = user_histories[user_id][-10:]
-
+ 
     try:
         response = openai.chat.completions.create(
             model="gpt-4o-mini",
@@ -73,10 +82,11 @@ async def process_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         reply = response.choices[0].message.content
     except Exception as e:
+        print(f"OpenAI xato: {e}")
         reply = "Hozir texnik muammo bor, tez orada Asadbek aka o'zi bog'lanadi! 🙏"
-
+ 
     user_histories[user_id].append({"role": "assistant", "content": reply})
-
+ 
     if update.business_message:
         await context.bot.send_message(
             chat_id=message.chat_id,
@@ -85,31 +95,31 @@ async def process_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     else:
         await message.reply_text(reply)
-
-
+ 
+ 
 application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, process_message))
-
-
-@app.route(f"/webhook", methods=["POST"])
+ 
+ 
+@app.route("/webhook", methods=["POST"])
 def webhook():
     data = request.get_json()
     update = Update.de_json(data, application.bot)
-    asyncio.run(application.process_update(update))
+    loop.run_until_complete(application.process_update(update))
     return "OK", 200
-
-
+ 
+ 
 @app.route("/")
 def index():
     return "Avtomentor Bot ishlamoqda! ✅", 200
-
-
+ 
+ 
 @app.route("/set_webhook")
 def set_webhook():
     url = f"{WEBHOOK_URL}/webhook"
-    asyncio.run(application.bot.set_webhook(url=url))
+    loop.run_until_complete(application.bot.set_webhook(url=url))
     return f"Webhook o'rnatildi: {url}", 200
-
-
+ 
+ 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
