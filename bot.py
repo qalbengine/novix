@@ -16,6 +16,7 @@ HAYDOVCHILIK MAKTABI haqida:
 - Brend: Avtomentor
 - Joylashuv: Baliqchi tumani, Andijon viloyati
 - Kategoriyalar: B va BC
+- To'lovlar B toifa 5,5 milion , BC toifa 7,2 milion
 - 3600+ dan ortiq o'quvchi bitirgan
 - Pul qaytarish kafolati bor
 
