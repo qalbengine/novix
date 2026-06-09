@@ -2,6 +2,7 @@ import os
 import openai
 import asyncio
 import traceback
+import time
 from flask import Flask, request
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
 from telegram.ext import Application, MessageHandler, CommandHandler, filters, ContextTypes
@@ -11,63 +12,48 @@ OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "")
 ADMIN_ID = os.environ.get("ADMIN_ID", "")  # Admin Telegram ID si
 
-SYSTEM_PROMPT = """Sen Avtomentor va Ilhomjon Avtotest loyihalarining aqlli yordamchi assistentisan. Ismingiz — Avto AI. 
+SYSTEM_PROMPT = """Sen Avtomentor haydovchilik maktabi egasisisan — Asadbek. Mijozlar bilan yozishmoqdasiz.
 
-Siz juda samimiy, muloyim va professional tarzda O'zbek tilida gaplashasiz. Javoblaringiz qisqa, aniq va odamdek tabiiy bo'lsin. Emojidan o'rinli foydalaning.
-
-━━━━━━━━━━━━━━━━━━━━━━
-🏫 HAYDOVCHILIK MAKTABI (Offline)
-━━━━━━━━━━━━━━━━━━━━━━
-Brend: Avtomentor / Ilhomjon Avtotest
-📍 Joylashuv: Andijon viloyati, Baliqchi tumani
-📞 Bog'lanish: @Aa_Asadbek | 932502719
-
-🚗 B toifa:
-- Narx: 5,500,000 so'm
-- Davomiyligi: 2 oy 15 kun
-- Haftada 6 dars (2 smena tanlovi)
-- Nazariy + haftada 1 kun amaliy mashg'ulot
-
-🚛 BC toifa:
-- Narx: 7,200,000 so'm
-- Davomiyligi: 5 oy 20 kun
-- Haftada 6 dars (2 smena tanlovi)
-- Nazariy + haftada 1 kun amaliy mashg'ulot
-
-📅 Imtihonga tayyorlov (Offline intensiv):
-- Davomiyligi: 7 kun
-- Narx: 1,000,000 so'm
-- 100% o'tish kafolati!
-- Uzoqdan kelganlar uchun kvartira: 35,000 so'm/kun
+MUHIM: Sen bot emassan. Hech qachon "Men bot" yoki "Men AI" dema. Oddiy odam kabi, qisqa va jonli yoz.
 
 ━━━━━━━━━━━━━━━━━━━━━━
-💻 ONLINE KURS (Ilhomjon Avtotest)
+KURSLAR MA'LUMOTI
 ━━━━━━━━━━━━━━━━━━━━━━
-- Narx: 600,000 so'm (1-dars bepul sinov, yoqmasa pul qaytariladi!)
-- Davomiyligi: 14 kun
-- Vaqt: Har kuni 20:00 — 22:00 (Dushanbadan Shanbagacha)
-- Format: Google Meet orqali jonli darslar
-- Platform: avtomentorpro.uz
-- 100% imtihon topshirish kafolati
+🚗 B toifa (offline):
+- Narx: 5 500 000 so'm
+- Muddat: 2 oy 15 kun, haftada 6 kun
+- 2 smena: ertalab yoki kechki
+
+🚛 BC toifa (offline):
+- Narx: 7 200 000 so'm
+- Muddat: 5 oy 20 kun, haftada 6 kun
+
+📝 Imtihon tayyorlovi (intensiv):
+- Narx: 1 000 000 so'm, 7 kun
+- 100% o'tish kafolati
+- Uzoqdan kelganlar: kvartira 35 000 so'm/kun
+
+💻 Online kurs:
+- Narx: 600 000 so'm
+- 14 kun, har kuni kech 20:00-22:00
+- Google Meet + avtomentorpro.uz platformasi
+- 1-dars bepul sinov — yoqmasa pul qaytadi
+- 100% imtihon kafolati
 
 💳 To'lov: 9860100126865797 (Asadbek Axmatqulov)
-To'lovdan so'ng chekni shu botga yuboring — admin tekshirib guruhga qo'shadi.
-
-🔗 Foydali havolalar:
-- Natijalar: https://t.me/Avtomentor_Info/3/1232
-- YouTube: @ilhomjon_avtotest_rasmiy
-- Telegram chat: @ilhomjon_avtotest_chat
+Chekni @avtomentor_admin ga yuboring
 
 ━━━━━━━━━━━━━━━━━━━━━━
-JAVOB BERISH QOIDALARI
+YOZISH USLUBI
 ━━━━━━━━━━━━━━━━━━━━━━
-1. DOIM O'zbek tilida javob ber
-2. Samimiy va do'stona bo'l
-3. Qisqa javob ber — 3-5 jumla yetarli
-4. Narx so'rasa → aniq narxni ayt
-5. To'lov so'rasa → karta raqamini ayt va chekni shu botga yuborishni ayt
-6. Bilmagan narsani o'ylab topma → "Asadbek aka bilan bog'laning: @Aa_Asadbek" de
-7. Oxirida: "Boshqa savolingiz bo'lsa yozing! 😊" de
+- Qisqa yoz: 1-3 jumla yetarli
+- Oddiy so'zlashuv tili, rasmiy emas
+- Savol bergan narsaga to'g'ri javob ber
+- Kerak bo'lsa emoji ishlat, lekin ko'p emas
+- Mijoz ismi/raqami yo'q bo'lsa, 2-3 xabardan keyin tabiiy so'ra:
+  "Aytgancha, ismingiz nima edi? 😊" yoki "Raqamingizni qoldirsangiz, to'g'ridan bog'lanaman"
+- Bilmagan narsani ixtiro qilma — "Asadbek aka bilan to'g'ridan gaplashing: @Aa_Asadbek"
+- Hech qachon: "Boshqa savolingiz bo'lsa yozing" kabi standart bot iboralar ishlatma
 """
 
 # Foydalanuvchi holatlari
@@ -75,6 +61,11 @@ JAVOB BERISH QOIDALARI
 user_states = {}
 user_info = {}
 user_histories = {}
+
+# Bot holati
+bot_paused = False          # /pause bilan to'liq o'chirish
+paused_chats = {}           # {chat_id: timestamp} — siz javob bergan chatlar (30 daqiqa jim)
+PAUSE_DURATION = 30 * 60    # 30 daqiqa (soniyalarda)
 
 print(f"BOT_TOKEN mavjud: {bool(BOT_TOKEN)}")
 print(f"OPENAI_API_KEY mavjud: {bool(OPENAI_API_KEY)}")
@@ -171,6 +162,27 @@ async def handle_update(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = message.text.strip()
     source = "Business" if is_business else "Private"
 
+    # Agar xabar sizdan (owner) kelsa — o'sha chatni 30 daqiqa pauza qil
+    owner_id = int(ADMIN_ID) if ADMIN_ID else None
+    if owner_id and user_id == owner_id and is_business:
+        paused_chats[chat_id] = time.time()
+        print(f"Owner javob berdi — chat {chat_id} pauza qilindi (30 daqiqa)")
+        return
+
+    # Bot to'liq pauzada bo'lsa — javob berma
+    if bot_paused:
+        print("Bot pauzada — javob berilmadi")
+        return
+
+    # Bu chat pauzada bo'lsa — tekshir
+    if chat_id in paused_chats:
+        elapsed = time.time() - paused_chats[chat_id]
+        if elapsed < PAUSE_DURATION:
+            print(f"Chat {chat_id} pauzada ({int((PAUSE_DURATION - elapsed) / 60)} daqiqa qoldi)")
+            return
+        else:
+            del paused_chats[chat_id]  # Pauza tugadi
+
     # Guruh xabarlari — faqat mention da
     if hasattr(message, 'chat') and message.chat.type in ["group", "supergroup"]:
         bot_username = application.bot_data.get("username", "")
@@ -181,53 +193,10 @@ async def handle_update(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await process_message(context, chat_id, user_id, reply, business_connection_id)
         return
 
-    state = user_states.get(user_id, "new")
-
-    # YANGI FOYDALANUVCHI → Isim so'ra
-    if state == "new":
-        user_states[user_id] = "waiting_name"
-        await process_message(
-            context, chat_id, user_id,
-            "Assalomu alaykum! 👋 Avtomentor yordamchi botiga xush kelibsiz!\n\n"
-            "Davom etishdan oldin, iltimos ismingizni yozing:",
-            business_connection_id
-        )
-        return
-
-    # ISIM KUTILMOQDA
-    elif state == "waiting_name":
-        user_info[user_id] = {"name": text, "source": source}
-        user_states[user_id] = "waiting_phone"
-        await process_message(
-            context, chat_id, user_id,
-            f"Rahmat, {text}! 😊\n\nIltimos telefon raqamingizni yuboring:\n(Masalan: +998901234567)",
-            business_connection_id
-        )
-        return
-
-    # RAQAM KUTILMOQDA
-    elif state == "waiting_phone":
-        name = user_info.get(user_id, {}).get("name", "Noma'lum")
-        user_info[user_id]["phone"] = text
-        user_states[user_id] = "active"
-
-        # Adminga xabar yuborish
-        await notify_admin(context, user_id, name, text, source)
-
-        await process_message(
-            context, chat_id, user_id,
-            f"✅ Rahmat, {name}!\n\n"
-            f"Ma'lumotlaringiz saqlandi. Endi kurs yoki xizmatlar haqida savol bera olasiz!\n\n"
-            f"Qanday yordam kerak? 😊",
-            business_connection_id
-        )
-        return
-
-    # FAOL FOYDALANUVCHI → AI javob
-    elif state == "active":
-        print(f"Xabar ({source}): {text[:30]}")
-        reply = await get_ai_reply(user_id, text)
-        await process_message(context, chat_id, user_id, reply, business_connection_id)
+    # AI javob — to'g'ridan
+    print(f"Xabar ({source}): {text[:30]}")
+    reply = await get_ai_reply(user_id, text)
+    await process_message(context, chat_id, user_id, reply, business_connection_id)
 
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -239,7 +208,51 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await handle_update(update, context)
 
 
+async def pause_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    global bot_paused
+    owner_id = int(ADMIN_ID) if ADMIN_ID else None
+    if update.message.from_user.id == owner_id:
+        bot_paused = True
+        await update.message.reply_text("⏸ Bot pauza qilindi. Barcha xabarlarga o'zingiz javob berasiz.")
+    else:
+        await update.message.reply_text("Bu buyruq faqat admin uchun.")
+
+
+async def resume_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    global bot_paused
+    owner_id = int(ADMIN_ID) if ADMIN_ID else None
+    if update.message.from_user.id == owner_id:
+        bot_paused = False
+        paused_chats.clear()
+        await update.message.reply_text("▶️ Bot yoqildi. Endi barcha xabarlarga javob beradi.")
+    else:
+        await update.message.reply_text("Bu buyruq faqat admin uchun.")
+
+
+async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    owner_id = int(ADMIN_ID) if ADMIN_ID else None
+    if update.message.from_user.id != owner_id:
+        return
+    status = "⏸ Pauza" if bot_paused else "▶️ Faol"
+    paused_count = len(paused_chats)
+    await update.message.reply_text(
+        f"🤖 Bot holati: {status}
+"
+        f"💬 Pauza qilingan chatlar: {paused_count} ta
+
+"
+        f"Buyruqlar:
+"
+        f"/pause — Botni to'xtatish
+"
+        f"/resume — Botni yoqish"
+    )
+
+
 application.add_handler(CommandHandler("start", start_command))
+application.add_handler(CommandHandler("pause", pause_command))
+application.add_handler(CommandHandler("resume", resume_command))
+application.add_handler(CommandHandler("status", status_command))
 application.add_handler(MessageHandler(filters.ALL, handle_update))
 
 
