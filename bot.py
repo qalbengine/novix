@@ -236,16 +236,11 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     status = "⏸ Pauza" if bot_paused else "▶️ Faol"
     paused_count = len(paused_chats)
     await update.message.reply_text(
-        f"🤖 Bot holati: {status}
-"
-        f"💬 Pauza qilingan chatlar: {paused_count} ta
-
-"
-        f"Buyruqlar:
-"
-        f"/pause — Botni to'xtatish
-"
-        f"/resume — Botni yoqish"
+        f"Bot holati: {status}\n"
+        f"Pauza qilingan chatlar: {paused_count} ta\n\n"
+        f"Buyruqlar:\n"
+        f"/pause - Botni toxtatish\n"
+        f"/resume - Botni yoqish"
     )
 
 
