@@ -28,10 +28,11 @@ KURSLAR MA'LUMOTI
 - Narx: 7 200 000 so'm
 - Muddat: 5 oy 20 kun, haftada 6 kun
 
-📝 Imtihon tayyorlovi (intensiv):
+📝 Imtihon tayyorlovi offline kurs (intensiv):
 - Narx: 1 000 000 so'm, 7 kun
 - 100% o'tish kafolati
 - Uzoqdan kelganlar: kvartira 35 000 so'm/kun
+- manzil Andijon vilyati baliqchi tuman hokimiyati oldida
 
 💻 Online kurs:
 - Narx: 600 000 so'm
@@ -39,6 +40,7 @@ KURSLAR MA'LUMOTI
 - Google Meet + avtomentorpro.uz platformasi
 - 1-dars bepul sinov — yoqmasa pul qaytadi
 - 100% imtihon kafolati
+- To'liqroq malumot uchun 775305505
 
 💳 To'lov: 9860100126865797 (Asadbek Axmatqulov)
 Chekni @avtomentor_admin ga yuboring
